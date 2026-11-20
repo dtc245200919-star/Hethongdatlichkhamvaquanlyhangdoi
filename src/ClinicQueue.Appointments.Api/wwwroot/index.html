@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đặt lịch khám</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="background-orb orb-one"></div>
+  <div class="background-orb orb-two"></div>
+
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Trang chủ">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M10.8 3h2.4v7.8H21v2.4h-7.8V21h-2.4v-7.8H3v-2.4h7.8V3Z"/></svg>
+        </span>
+        <span>
+          <strong>MediCare</strong>
+          <small>Hệ thống phòng khám</small>
+        </span>
+      </a>
+      <span class="status-pill"><i></i> Đang hoạt động</span>
+    </header>
+
+    <div class="hero">
+      <div>
+        <p class="eyebrow">CHĂM SÓC SỨC KHỎE</p>
+        <h1>Đặt lịch khám dễ dàng</h1>
+        <p class="hero-description">Chọn bác sĩ, thời gian phù hợp và hoàn tất đặt lịch trong vài bước.</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="doctor-portrait">
+          <svg viewBox="0 0 220 220">
+            <circle cx="110" cy="86" r="44" fill="#f1b79e"/>
+            <path d="M68 82c2-32 21-52 47-52 31 0 49 25 43 61-12-7-21-20-25-35-10 15-33 24-65 26Z" fill="#183b56"/>
+            <path d="M40 220c4-57 28-88 70-88s66 31 70 88H40Z" fill="#f7fafc"/>
+            <path d="M82 132l28 30 28-30 18 88H64l18-88Z" fill="#fff"/>
+            <path d="M110 162v25" stroke="#8eb8cf" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="110" cy="190" r="9" fill="none" stroke="#8eb8cf" stroke-width="5"/>
+            <path d="M71 174c0 13 4 21 12 21M149 174c0 13-4 21-12 21" fill="none" stroke="#8eb8cf" stroke-width="4"/>
+            <circle cx="94" cy="88" r="3" fill="#183b56"/>
+            <circle cx="126" cy="88" r="3" fill="#183b56"/>
+            <path d="M99 105c7 6 15 6 22 0" fill="none" stroke="#b66f60" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="floating-note note-one">✓ Hỗ trợ tận tâm</span>
+        <span class="floating-note note-two"><b>30</b> phút / ca</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <section class="card booking-card">
+        <div class="card-heading">
+          <div class="step">1</div>
+          <div>
+            <p class="card-kicker">THÔNG TIN KHÁM</p>
+            <h2>Chọn lịch hẹn</h2>
+          </div>
+        </div>
+
+        <form id="booking-form">
+          <label>
+            <span>Bác sĩ</span>
+            <select id="doctor" required></select>
+          </label>
+
+          <label>
+            <span>Ngày khám</span>
+            <input id="date" type="date" required>
+          </label>
+
+          <label class="full-width">
+            <span>Giờ khám</span>
+            <select id="slot" required disabled>
+              <option value="">Chọn ngày để xem khung giờ</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Họ và tên</span>
+            <input id="patient-name" maxlength="120" placeholder="Nguyễn Văn An" required>
+          </label>
+
+          <label>
+            <span>Số điện thoại</span>
+            <input id="patient-phone" maxlength="40" inputmode="tel" placeholder="0901 234 567" required>
+          </label>
+
+          <button id="submit-button" type="submit">
+            <span>Xác nhận đặt lịch</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </form>
+        <p id="message" class="message" role="status" aria-live="polite"></p>
+      </section>
+
+      <aside class="side-column">
+        <section class="card lookup-card">
+          <div class="card-heading compact">
+            <div class="step">2</div>
+            <div>
+              <p class="card-kicker">QUẢN LÝ LỊCH HẸN</p>
+              <h2>Tra cứu lịch khám</h2>
+            </div>
+          </div>
+          <form id="lookup-form">
+            <label>
+              <span>Mã lịch khám</span>
+              <input id="appointment-id" placeholder="Nhập mã lịch">
+            </label>
+            <button type="submit" class="secondary">Tra cứu</button>
+          </form>
+          <pre id="lookup-result"></pre>
+        </section>
+
+        <section class="help-card">
+          <div class="help-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-3.5-10.5h7M12 7.5v7"/></svg>
+          </div>
+          <div>
+            <strong>Cần hỗ trợ?</strong>
+            <p>Liên hệ bộ phận chăm sóc khách hàng để được hỗ trợ.</p>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
