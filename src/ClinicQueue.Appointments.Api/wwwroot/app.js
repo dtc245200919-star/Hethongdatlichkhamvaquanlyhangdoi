@@ -13,6 +13,7 @@ maxDate.setDate(maxDate.getDate() + 30);
 dateInput.max = new Date(maxDate.getTime() - maxDate.getTimezoneOffset() * 60000)
   .toISOString()
   .slice(0, 10);
+dateInput.value = localDate;
 
 const queueDoctorSelect = document.querySelector("#queue-doctor");
 const queueDateInput = document.querySelector("#queue-date");
@@ -112,18 +113,31 @@ async function loadSlots() {
   slotSelect.disabled = true;
   slotSelect.innerHTML = "<option>Đang tải khung giờ...</option>";
   const doctorId = doctorSelect.value;
-  if (!doctorId || !dateInput.value) return;
-
-  const response = await fetch(`/doctors/${doctorId}/slots?date=${dateInput.value}`);
-  if (!response.ok) {
-    const body = await response.json();
-    throw new Error(body.error || "Không thể tải khung giờ.");
+  if (!doctorId) {
+    slotSelect.innerHTML = "<option value=\"\">Chưa có bác sĩ được chọn</option>";
+    return;
   }
-  const slots = await response.json();
-  slotSelect.innerHTML = slots.length
-    ? slots.map(slot => `<option value="${slot}">${formatTime(slot)}</option>`).join("")
-    : "<option value=\"\">Không còn khung giờ trống</option>";
-  slotSelect.disabled = slots.length === 0;
+  if (!dateInput.value) {
+    slotSelect.innerHTML = "<option value=\"\">Vui lòng chọn ngày khám</option>";
+    return;
+  }
+
+  try {
+    const response = await fetch(`/doctors/${encodeURIComponent(doctorId)}/slots?date=${encodeURIComponent(dateInput.value)}`);
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(body?.error || "Không thể tải khung giờ.");
+    }
+    const slots = Array.isArray(body) ? body : [];
+    slotSelect.innerHTML = slots.length
+      ? slots.map(slot => `<option value="${slot}">${formatTime(slot)}</option>`).join("")
+      : "<option value=\"\">Không còn khung giờ trống</option>";
+    slotSelect.disabled = slots.length === 0;
+  } catch (error) {
+    slotSelect.innerHTML = "<option value=\"\">Không tải được khung giờ</option>";
+    slotSelect.disabled = true;
+    throw error;
+  }
 }
 
 doctorSelect.addEventListener("change", () => loadSlots().catch(showError));
