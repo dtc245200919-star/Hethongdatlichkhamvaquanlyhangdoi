@@ -40,6 +40,7 @@ public sealed class ClinicDbContext(DbContextOptions<ClinicDbContext> options) :
             entity.HasKey(appointment => appointment.Id);
             entity.Property(appointment => appointment.PatientName).HasMaxLength(120).IsRequired();
             entity.Property(appointment => appointment.PatientPhone).HasMaxLength(40).IsRequired();
+            entity.Property(appointment => appointment.ScheduledAt).HasColumnType("timestamp without time zone");
             entity.Property(appointment => appointment.Status).HasConversion<string>().HasMaxLength(20);
             entity.HasOne(appointment => appointment.Room)
                 .WithMany()

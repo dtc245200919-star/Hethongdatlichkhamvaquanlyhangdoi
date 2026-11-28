@@ -28,6 +28,20 @@ public static class ClinicDatabase
                     ALTER TABLE "Doctors" ADD COLUMN IF NOT EXISTS "RoomId" uuid;
                     ALTER TABLE "Doctors" ADD COLUMN IF NOT EXISTS "ServiceStatus" character varying(20);
                     ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "RoomId" uuid;
+                    DO $$
+                    BEGIN
+                        IF EXISTS (
+                            SELECT 1
+                            FROM information_schema.columns
+                            WHERE table_name = 'Appointments'
+                              AND column_name = 'ScheduledAt'
+                              AND data_type = 'timestamp with time zone'
+                        ) THEN
+                            ALTER TABLE "Appointments"
+                                ALTER COLUMN "ScheduledAt" TYPE timestamp without time zone
+                                USING "ScheduledAt" AT TIME ZONE 'UTC';
+                        END IF;
+                    END $$;
                     UPDATE "Rooms"
                     SET "Name" = 'Phòng 101', "Location" = 'Tầng 1 - Khu A', "ServiceStatus" = 'Available'
                     WHERE "Id" = 'b2000000-0000-0000-0000-000000000001';
