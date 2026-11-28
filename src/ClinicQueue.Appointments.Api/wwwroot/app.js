@@ -20,12 +20,43 @@ queueDateInput.min = localDate;
 queueDateInput.max = dateInput.max;
 queueDateInput.value = localDate;
 
+const statusLabels = {
+  Available: "Đang tiếp nhận",
+  Busy: "Đang bận",
+  OnBreak: "Đang nghỉ giải lao",
+  Closed: "Ngừng khám",
+  Pending: "Chờ xác nhận",
+  Confirmed: "Đã xác nhận",
+  Cancelled: "Đã hủy"
+};
+
+function getStatusLabel(status) {
+  return statusLabels[status] || status;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatTime(value) {
+  return new Date(value).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+}
+
 async function loadDoctors() {
   const response = await fetch("/doctors");
   if (!response.ok) throw new Error("Không thể tải danh sách bác sĩ.");
   const doctors = await response.json();
   const options = doctors.map(doctor =>
-    `<option value="${doctor.id}">${doctor.name} - ${doctor.specialty} - ${doctor.roomName} (${doctor.serviceStatus})</option>`
+    `<option value="${doctor.id}">${doctor.name} - ${doctor.specialty} - ${doctor.roomName} (${getStatusLabel(doctor.serviceStatus)})</option>`
   ).join("");
   doctorSelect.innerHTML = options;
   queueDoctorSelect.innerHTML = options;
@@ -90,7 +121,7 @@ async function loadSlots() {
   }
   const slots = await response.json();
   slotSelect.innerHTML = slots.length
-    ? slots.map(slot => `<option value="${slot}">${new Date(slot).toLocaleString("vi-VN")}</option>`).join("")
+    ? slots.map(slot => `<option value="${slot}">${formatTime(slot)}</option>`).join("")
     : "<option value=\"\">Không còn khung giờ trống</option>";
   slotSelect.disabled = slots.length === 0;
 }
@@ -132,20 +163,29 @@ document.querySelector("#lookup-form").addEventListener("submit", async event =>
   event.preventDefault();
   const id = document.querySelector("#appointment-id").value.trim();
   const output = document.querySelector("#lookup-result");
-  output.textContent = "";
+  output.innerHTML = "";
   if (!id) {
     output.textContent = "Vui lòng nhập mã lịch khám.";
     return;
   }
   const response = await fetch(`/appointments/${encodeURIComponent(id)}`);
-  const body = await response.text();
-  if (body) {
-    try {
-      output.textContent = JSON.stringify(JSON.parse(body), null, 2);
-    } catch {
-      output.textContent = body;
-    }
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    output.textContent = body?.error || "Không tìm thấy lịch khám.";
+    return;
   }
+
+  output.innerHTML = `
+    <div class="lookup-details">
+      <div><span>Mã lịch</span><strong>${escapeHtml(body.id)}</strong></div>
+      <div><span>Bệnh nhân</span><strong>${escapeHtml(body.patientName)}</strong></div>
+      <div><span>Bác sĩ</span><strong>${escapeHtml(body.doctorName)}</strong></div>
+      <div><span>Ngày khám</span><strong>${new Date(body.scheduledAt).toLocaleDateString("vi-VN")}</strong></div>
+      <div><span>Giờ khám</span><strong>${formatTime(body.scheduledAt)}</strong></div>
+      <div><span>Số thứ tự</span><strong>${body.queueNumber ?? "Đang chờ cấp số"}</strong></div>
+      <div><span>Trạng thái</span><strong>${getStatusLabel(body.status)}</strong></div>
+    </div>
+  `;
 });
 
 document.querySelector("#cancel-form").addEventListener("submit", async event => {
@@ -191,7 +231,7 @@ document.querySelector("#doctor-status-form").addEventListener("submit", async e
   const body = await response.json().catch(() => null);
   result.style.color = response.ok ? "#19763b" : "#b42318";
   result.textContent = response.ok
-    ? `Đã cập nhật trạng thái: ${body.serviceStatus}`
+    ? `Đã cập nhật trạng thái: ${getStatusLabel(body.serviceStatus)}`
     : body?.error || "Không thể cập nhật trạng thái.";
   if (response.ok) {
     await loadDoctors();
@@ -200,22 +240,48 @@ document.querySelector("#doctor-status-form").addEventListener("submit", async e
 
 async function loadQueue() {
   const output = document.querySelector("#queue-result");
-  output.textContent = "Đang tải hàng đợi...";
+  output.innerHTML = '<p class="queue-loading">Đang tải hàng đợi...</p>';
   const doctorId = queueDoctorSelect.value;
   const date = queueDateInput.value;
   const response = await fetch(`/queues/${encodeURIComponent(doctorId)}?date=${encodeURIComponent(date)}`);
-  const body = await response.text();
-  if (response.ok) {
-    try {
-      output.textContent = JSON.stringify(JSON.parse(body), null, 2);
-    } catch {
-      output.textContent = body;
-    }
-  } else {
-    output.textContent = body;
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    output.innerHTML = `<p class="queue-empty">${escapeHtml(body?.error || "Không thể tải hàng đợi.")}</p>`;
+    return;
   }
+
+  const appointments = body.appointments || [];
+  if (!appointments.length) {
+    output.innerHTML = '<p class="queue-empty">Chưa có lịch khám trong ngày này.</p>';
+    return;
+  }
+
+  output.innerHTML = `
+    <div class="queue-table-wrap">
+      <table class="queue-table">
+        <thead>
+          <tr>
+            <th>Số thứ tự</th>
+            <th>Bệnh nhân</th>
+            <th>Giờ khám</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${appointments.map(appointment => `
+            <tr>
+              <td><span class="queue-number">${appointment.queueNumber ?? "-"}</span></td>
+              <td>${escapeHtml(appointment.patientName)}</td>
+              <td>${formatTime(appointment.scheduledAt)}</td>
+              <td><span class="queue-status status-${String(appointment.status).toLowerCase()}">${getStatusLabel(appointment.status)}</span></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 loadDoctors()
-  .then(() => loadSlots())
+  .then(() => Promise.all([loadSlots(), loadQueue()]))
   .catch(showError);
