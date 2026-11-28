@@ -4,6 +4,8 @@
 
 ## Kiến trúc
 
+Sơ đồ kiến trúc chi tiết: [docs/architecture.svg](docs/architecture.svg). Báo cáo: [Bao_cao_Bai_tap_lon.md](Bao_cao_Bai_tap_lon.md).
+
 ```text
 Console Client --REST--> Appointments API --transaction--> PostgreSQL
       |                         |
@@ -20,6 +22,7 @@ Console Client --REST--> Appointments API --transaction--> PostgreSQL
 - **Queue Worker** nhận yêu cầu bất đồng bộ, cấp số thứ tự theo bác sĩ/ngày bằng cập nhật nguyên tử trong PostgreSQL.
 - **Notification Service** nhận sự kiện hàng đợi từ RabbitMQ và phát sự kiện `QueueChanged` qua SignalR tới nhóm bác sĩ tương ứng.
 - **Console Client** gọi REST API và đăng ký SignalR để minh họa luồng cập nhật trực tiếp.
+- Giao diện Web phục vụ đặt lịch, tra cứu, hủy lịch, xem hàng đợi và nhận cập nhật hàng đợi thời gian thực qua SignalR.
 - PostgreSQL và RabbitMQ chạy riêng; các service gọi nhau bằng service name trong Docker network.
 
 ### Phục hồi và tính nhất quán
@@ -57,7 +60,7 @@ Lần đầu, API tạo schema và dữ liệu mẫu gồm ba bác sĩ. Các c�
 
 | Thành phần | URL |
 |---|---|
-| Appointment API | `http://localhost:8080` |
+| Appointment API | `http://localhost:<API_PORT>` (mặc định `8080`) |
 | Notification Service / SignalR | `http://localhost:8082/hubs/notifications` |
 | RabbitMQ Management | `http://localhost:15672` |
 | PostgreSQL | `localhost:5432` |
@@ -107,6 +110,11 @@ Docker phải đang chạy để build image hoặc kiểm thử tích hợp qua
 | `DELETE` | `/appointments/{id}` | Hủy lịch |
 | `GET` | `/appointments/{id}` | Tra cứu lịch và trạng thái |
 | `GET` | `/queues/{doctorId}?date=yyyy-MM-dd` | Tra cứu hàng đợi trong ngày |
+| `GET` | `/rooms` | Danh sách phòng khám |
+| `PATCH` | `/doctors/{id}/service-status` | Cập nhật trạng thái phục vụ bác sĩ |
+| `PATCH` | `/rooms/{id}/service-status` | Cập nhật trạng thái phục vụ phòng khám |
+| `GET` | `/health` | Kiểm tra tình trạng dịch vụ |
+| `GET` | `/config` | Trả cấu hình public cần thiết cho web |
 
 Ví dụ đặt lịch (giờ khám là giờ địa phương của phòng khám, không kèm múi giờ):
 
@@ -121,6 +129,12 @@ Ví dụ đặt lịch (giờ khám là giờ địa phương của phòng khám
 
 Lịch mới ở trạng thái `Pending`; sau khi worker xử lý sẽ thành `Confirmed` và có `queueNumber`. Đặt trùng khung giờ trả `409 Conflict`. Hủy lịch trả `204 No Content`.
 
+## Kiểm thử
+
+```powershell
+dotnet test tests/ClinicQueue.Tests/ClinicQueue.Tests.csproj
+```
+
 ## Cấu trúc source
 
 ```text
@@ -130,6 +144,7 @@ src/
   ClinicQueue.Notification.Service/   SignalR hub/consumer và Dockerfile
   ClinicQueue.Shared/                 Entity, DbContext, event và outbox
   ClinicQueue.Client/                 Console client REST + SignalR
+tests/ClinicQueue.Tests/              Unit test cốt lõi
 docker-compose.yml
 .env.example
 ```

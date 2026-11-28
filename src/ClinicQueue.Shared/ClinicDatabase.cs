@@ -16,9 +16,55 @@ public static class ClinicDatabase
             if (await db.Database.CanConnectAsync(cancellationToken))
             {
                 await db.Database.EnsureCreatedAsync(cancellationToken);
+                await db.Database.ExecuteSqlRawAsync(
+                    """
+                    CREATE TABLE IF NOT EXISTS "Rooms" (
+                        "Id" uuid NOT NULL,
+                        "Name" character varying(120) NOT NULL,
+                        "Location" character varying(120) NOT NULL,
+                        "ServiceStatus" character varying(20) NOT NULL,
+                        CONSTRAINT "PK_Rooms" PRIMARY KEY ("Id")
+                    );
+                    ALTER TABLE "Doctors" ADD COLUMN IF NOT EXISTS "RoomId" uuid;
+                    ALTER TABLE "Doctors" ADD COLUMN IF NOT EXISTS "ServiceStatus" character varying(20);
+                    ALTER TABLE "Appointments" ADD COLUMN IF NOT EXISTS "RoomId" uuid;
+                    UPDATE "Rooms"
+                    SET "Name" = 'Phòng 101', "Location" = 'Tầng 1 - Khu A', "ServiceStatus" = 'Available'
+                    WHERE "Id" = 'b2000000-0000-0000-0000-000000000001';
+                    UPDATE "Rooms"
+                    SET "Name" = 'Phòng 102', "Location" = 'Tầng 1 - Khu A', "ServiceStatus" = 'Available'
+                    WHERE "Id" = 'b2000000-0000-0000-0000-000000000002';
+                    UPDATE "Rooms"
+                    SET "Name" = 'Phòng 201', "Location" = 'Tầng 2 - Khu B', "ServiceStatus" = 'Available'
+                    WHERE "Id" = 'b2000000-0000-0000-0000-000000000003';
+                    UPDATE "Doctors" SET "RoomId" =
+                        CASE
+                            WHEN "Id" = 'a1000000-0000-0000-0000-000000000001' THEN 'b2000000-0000-0000-0000-000000000001'
+                            WHEN "Id" = 'a1000000-0000-0000-0000-000000000002' THEN 'b2000000-0000-0000-0000-000000000002'
+                            WHEN "Id" = 'a1000000-0000-0000-0000-000000000003' THEN 'b2000000-0000-0000-0000-000000000003'
+                        END
+                    WHERE "RoomId" IS NULL;
+                    UPDATE "Doctors" SET "ServiceStatus" = 'Available' WHERE "ServiceStatus" IS NULL;
+                    UPDATE "Appointments" a SET "RoomId" = d."RoomId"
+                    FROM "Doctors" d
+                    WHERE a."DoctorId" = d."Id" AND a."RoomId" IS NULL;
+                    """,
+                    cancellationToken);
+
+                if (!await db.Rooms.AnyAsync(cancellationToken))
+                {
+                    db.Rooms.AddRange(
+                        new Room { Id = Guid.Parse("b2000000-0000-0000-0000-000000000001"), Name = "Phòng 101", Location = "Tầng 1 - Khu A" },
+                        new Room { Id = Guid.Parse("b2000000-0000-0000-0000-000000000002"), Name = "Phòng 102", Location = "Tầng 1 - Khu A" },
+                        new Room { Id = Guid.Parse("b2000000-0000-0000-0000-000000000003"), Name = "Phòng 201", Location = "Tầng 2 - Khu B" });
+                    await db.SaveChangesAsync(cancellationToken);
+                }
 
                 if (!await db.Doctors.AnyAsync(cancellationToken))
                 {
+                    ClinicSeedData.Doctors[0].RoomId = Guid.Parse("b2000000-0000-0000-0000-000000000001");
+                    ClinicSeedData.Doctors[1].RoomId = Guid.Parse("b2000000-0000-0000-0000-000000000002");
+                    ClinicSeedData.Doctors[2].RoomId = Guid.Parse("b2000000-0000-0000-0000-000000000003");
                     db.Doctors.AddRange(ClinicSeedData.Doctors);
                     await db.SaveChangesAsync(cancellationToken);
                 }

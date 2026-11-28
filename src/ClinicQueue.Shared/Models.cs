@@ -7,13 +7,32 @@ public enum AppointmentStatus
     Cancelled
 }
 
+public enum ServiceStatus
+{
+    Available,
+    Busy,
+    OnBreak,
+    Closed
+}
+
 public sealed class Doctor
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
     public string Specialty { get; set; } = "";
+    public Guid RoomId { get; set; }
+    public Room? Room { get; set; }
     public TimeOnly OpensAt { get; set; }
     public TimeOnly ClosesAt { get; set; }
+    public ServiceStatus ServiceStatus { get; set; } = ServiceStatus.Available;
+}
+
+public sealed class Room
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Location { get; set; } = "";
+    public ServiceStatus ServiceStatus { get; set; } = ServiceStatus.Available;
 }
 
 public sealed class Appointment
@@ -23,6 +42,8 @@ public sealed class Appointment
     public string PatientPhone { get; set; } = "";
     public Guid DoctorId { get; set; }
     public Doctor? Doctor { get; set; }
+    public Guid RoomId { get; set; }
+    public Room? Room { get; set; }
     public DateTime ScheduledAt { get; set; }
     public AppointmentStatus Status { get; set; }
     public int? QueueNumber { get; set; }
@@ -45,17 +66,21 @@ public sealed class OutboxMessage
     public DateTime? PublishedAt { get; set; }
 }
 
-public sealed record AppointmentRequestedEvent(Guid AppointmentId);
+public sealed record AppointmentRequestedEvent(Guid AppointmentId, string? CorrelationId = null);
 
 public sealed record QueueChangedEvent(
     Guid AppointmentId,
     Guid DoctorId,
+    Guid RoomId,
     DateOnly QueueDate,
     int? QueueNumber,
     string PatientName,
-    string Status);
+    string Status,
+    string? CorrelationId = null);
 
-public sealed record DoctorResponse(Guid Id, string Name, string Specialty, string OpensAt, string ClosesAt);
+public sealed record RoomResponse(Guid Id, string Name, string Location, string ServiceStatus);
+
+public sealed record DoctorResponse(Guid Id, string Name, string Specialty, Guid RoomId, string RoomName, string ServiceStatus, string OpensAt, string ClosesAt);
 
 public sealed record AppointmentResponse(
     Guid Id,
@@ -73,6 +98,8 @@ public sealed record CreateAppointmentRequest(
     string PatientPhone,
     Guid DoctorId,
     DateTime ScheduledAt);
+
+public sealed record UpdateServiceStatusRequest(string Status);
 
 public static class ClinicSeedData
 {

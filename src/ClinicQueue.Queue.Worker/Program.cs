@@ -3,6 +3,7 @@ using ClinicQueue.Shared;
 using Microsoft.EntityFrameworkCore;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Logging.AddJsonConsole(options => options.IncludeScopes = true);
 var connectionString = builder.Configuration.GetConnectionString("ClinicDb")
     ?? throw new InvalidOperationException("ConnectionStrings:ClinicDb is required.");
 

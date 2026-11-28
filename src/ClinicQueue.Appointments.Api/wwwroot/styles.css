@@ -114,6 +114,10 @@ body {
   box-shadow: 0 0 0 4px rgba(74, 179, 123, 0.12);
 }
 
+.live-status {
+  margin-left: 8px;
+}
+
 .hero {
   min-height: 230px;
   display: grid;
@@ -362,6 +366,68 @@ button:disabled {
 
 #lookup-result {
   max-height: 220px;
+  margin: 14px 0 0;
+  white-space: pre-wrap;
+  overflow: auto;
+  border-radius: 10px;
+  color: #17324d;
+  font-size: 12px;
+}
+
+.card-divider {
+  margin: 18px 0;
+  border: 0;
+  border-top: 1px solid #e6eeee;
+}
+
+#cancel-form,
+#queue-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+#cancel-form label,
+#queue-form label {
+  display: grid;
+  gap: 8px;
+  color: #4d6676;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+button.danger {
+  background: #b42318;
+  box-shadow: 0 8px 18px rgba(180, 35, 24, 0.12);
+}
+
+.queue-card {
+  margin-top: 16px;
+  padding: 22px;
+}
+
+.status-card {
+  margin-top: 16px;
+  padding: 22px;
+}
+
+#doctor-status-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+#doctor-status-form label {
+  display: grid;
+  gap: 8px;
+  color: #4d6676;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+#queue-result {
+  max-height: 300px;
   margin: 14px 0 0;
   white-space: pre-wrap;
   overflow: auto;

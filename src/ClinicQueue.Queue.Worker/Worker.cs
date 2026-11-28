@@ -193,10 +193,12 @@ public sealed class Worker(
                 new QueueChangedEvent(
                     appointment.Id,
                     appointment.DoctorId,
+                    appointment.RoomId,
                     queueDate,
                     queueNumber,
                     appointment.PatientName,
-                    appointment.Status.ToString()),
+                    appointment.Status.ToString(),
+                    message.CorrelationId),
                 JsonOptions),
             CreatedAt = DateTime.UtcNow
         });

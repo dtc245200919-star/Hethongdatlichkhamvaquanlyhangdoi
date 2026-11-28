@@ -3,6 +3,8 @@ using ClinicQueue.Notification.Service;
 var builder = WebApplication.CreateBuilder(args);
 var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"] ?? "http://localhost:3000";
 
+builder.Logging.AddJsonConsole(options => options.IncludeScopes = true);
+
 builder.Services.AddSignalR();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.WithOrigins(allowedOrigin).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));

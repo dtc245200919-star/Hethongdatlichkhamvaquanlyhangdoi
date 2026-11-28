@@ -8,6 +8,8 @@ var connectionString = builder.Configuration.GetConnectionString("ClinicDb")
     ?? throw new InvalidOperationException("ConnectionStrings:ClinicDb is required.");
 var allowedOrigin = builder.Configuration["Cors:AllowedOrigin"] ?? "http://localhost:3000";
 
+builder.Logging.AddJsonConsole(options => options.IncludeScopes = true);
+
 builder.Services.AddDbContext<ClinicDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddSingleton<RabbitMqPublisher>();
 builder.Services.AddHostedService(serviceProvider => new OutboxDispatcher(
@@ -21,6 +23,19 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 var app = builder.Build();
 await ClinicDatabase.InitializeAsync(app.Services, app.Logger, app.Lifetime.ApplicationStopping);
 
+app.Use(async (context, next) =>
+{
+    var correlationId = context.Request.Headers["X-Correlation-ID"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(correlationId))
+    {
+        correlationId = Guid.NewGuid().ToString("N");
+    }
+    context.Items["CorrelationId"] = correlationId;
+    context.Response.Headers["X-Correlation-ID"] = correlationId;
+    context.TraceIdentifier = correlationId;
+    await next();
+});
+
 app.UseCors();
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -30,10 +45,53 @@ app.MapGet("/health", async (ClinicDbContext db, CancellationToken cancellationT
         ? Results.Ok(new { status = "healthy", service = "appointments-api" })
         : Results.StatusCode(StatusCodes.Status503ServiceUnavailable));
 
+app.MapGet("/config", (IConfiguration configuration) =>
+    Results.Ok(new
+    {
+        notificationHubUrl = configuration["Notification:HubUrl"]
+            ?? "http://localhost:8082/hubs/notifications"
+    }));
+
 app.MapGet("/doctors", async (ClinicDbContext db, CancellationToken cancellationToken) =>
 {
-    var doctors = await db.Doctors.AsNoTracking().OrderBy(doctor => doctor.Name).ToListAsync(cancellationToken);
+    var doctors = await db.Doctors.AsNoTracking().Include(doctor => doctor.Room).OrderBy(doctor => doctor.Name).ToListAsync(cancellationToken);
     return Results.Ok(doctors.Select(ToDoctorResponse));
+});
+
+app.MapGet("/rooms", async (ClinicDbContext db, CancellationToken cancellationToken) =>
+    Results.Ok(await db.Rooms.AsNoTracking()
+        .OrderBy(room => room.Name)
+        .Select(room => new RoomResponse(room.Id, room.Name, room.Location, room.ServiceStatus.ToString()))
+        .ToListAsync(cancellationToken)));
+
+app.MapPatch("/doctors/{doctorId:guid}/service-status", async (
+    Guid doctorId,
+    UpdateServiceStatusRequest request,
+    ClinicDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var doctor = await db.Doctors.Include(item => item.Room).SingleOrDefaultAsync(item => item.Id == doctorId, cancellationToken);
+    if (doctor is null) return Results.NotFound(new { error = "Không tìm thấy bác sĩ." });
+    if (!Enum.TryParse<ServiceStatus>(request.Status, ignoreCase: true, out var status))
+        return Results.BadRequest(new { error = "Trạng thái dịch vụ không hợp lệ." });
+    doctor.ServiceStatus = status;
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(ToDoctorResponse(doctor));
+});
+
+app.MapPatch("/rooms/{roomId:guid}/service-status", async (
+    Guid roomId,
+    UpdateServiceStatusRequest request,
+    ClinicDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var room = await db.Rooms.SingleOrDefaultAsync(item => item.Id == roomId, cancellationToken);
+    if (room is null) return Results.NotFound(new { error = "Không tìm thấy phòng khám." });
+    if (!Enum.TryParse<ServiceStatus>(request.Status, ignoreCase: true, out var status))
+        return Results.BadRequest(new { error = "Trạng thái dịch vụ không hợp lệ." });
+    room.ServiceStatus = status;
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new RoomResponse(room.Id, room.Name, room.Location, room.ServiceStatus.ToString()));
 });
 
 app.MapGet("/doctors/{doctorId:guid}/slots", async (
@@ -42,7 +100,7 @@ app.MapGet("/doctors/{doctorId:guid}/slots", async (
     ClinicDbContext db,
     CancellationToken cancellationToken) =>
 {
-    var doctor = await db.Doctors.AsNoTracking().SingleOrDefaultAsync(item => item.Id == doctorId, cancellationToken);
+    var doctor = await db.Doctors.AsNoTracking().Include(item => item.Room).SingleOrDefaultAsync(item => item.Id == doctorId, cancellationToken);
     if (doctor is null)
     {
         return Results.NotFound(new { error = "Không tìm thấy bác sĩ." });
@@ -85,6 +143,7 @@ app.MapPost("/appointments", async (
     CreateAppointmentRequest request,
     ClinicDbContext db,
     ILogger<Program> logger,
+    HttpContext httpContext,
     CancellationToken cancellationToken) =>
 {
     var patientName = request.PatientName?.Trim();
@@ -95,10 +154,14 @@ app.MapPost("/appointments", async (
         return Results.BadRequest(new { error = "Họ tên (tối đa 120 ký tự) và số điện thoại (tối đa 40 ký tự) là bắt buộc." });
     }
 
-    var doctor = await db.Doctors.SingleOrDefaultAsync(item => item.Id == request.DoctorId, cancellationToken);
+    var doctor = await db.Doctors.Include(item => item.Room).SingleOrDefaultAsync(item => item.Id == request.DoctorId, cancellationToken);
     if (doctor is null)
     {
         return Results.NotFound(new { error = "Không tìm thấy bác sĩ." });
+    }
+    if (doctor.ServiceStatus != ServiceStatus.Available || doctor.Room?.ServiceStatus != ServiceStatus.Available)
+    {
+        return Results.Conflict(new { error = "Bác sĩ hoặc phòng khám hiện không tiếp nhận lịch mới." });
     }
 
     var requestedDate = DateOnly.FromDateTime(request.ScheduledAt);
@@ -118,12 +181,14 @@ app.MapPost("/appointments", async (
         PatientName = patientName,
         PatientPhone = patientPhone,
         DoctorId = doctor.Id,
+        RoomId = doctor.RoomId,
         ScheduledAt = DateTime.SpecifyKind(request.ScheduledAt, DateTimeKind.Unspecified),
         Status = AppointmentStatus.Pending,
         CreatedAt = DateTime.UtcNow
     };
 
-    var requestedEvent = new AppointmentRequestedEvent(appointment.Id);
+    var correlationId = httpContext.Items["CorrelationId"] as string;
+    var requestedEvent = new AppointmentRequestedEvent(appointment.Id, correlationId);
     db.Appointments.Add(appointment);
     db.OutboxMessages.Add(new OutboxMessage
     {
@@ -170,6 +235,7 @@ app.MapDelete("/appointments/{appointmentId:guid}", async (
     Guid appointmentId,
     ClinicDbContext db,
     ILogger<Program> logger,
+    HttpContext httpContext,
     CancellationToken cancellationToken) =>
 {
     var appointment = await db.Appointments
@@ -189,10 +255,12 @@ app.MapDelete("/appointments/{appointmentId:guid}", async (
     var changedEvent = new QueueChangedEvent(
         appointment.Id,
         appointment.DoctorId,
+        appointment.RoomId,
         DateOnly.FromDateTime(appointment.ScheduledAt),
         appointment.QueueNumber,
         appointment.PatientName,
-        appointment.Status.ToString());
+        appointment.Status.ToString(),
+        httpContext.Items["CorrelationId"] as string);
     db.OutboxMessages.Add(new OutboxMessage
     {
         Id = Guid.NewGuid(),
@@ -249,7 +317,15 @@ app.MapGet("/queues/{doctorId:guid}", async (
 app.Run();
 
 static DoctorResponse ToDoctorResponse(Doctor doctor) =>
-    new(doctor.Id, doctor.Name, doctor.Specialty, doctor.OpensAt.ToString("HH:mm"), doctor.ClosesAt.ToString("HH:mm"));
+    new(
+        doctor.Id,
+        doctor.Name,
+        doctor.Specialty,
+        doctor.RoomId,
+        doctor.Room?.Name ?? "Chưa phân phòng",
+        doctor.ServiceStatus.ToString(),
+        doctor.OpensAt.ToString("HH:mm"),
+        doctor.ClosesAt.ToString("HH:mm"));
 
 static AppointmentResponse ToAppointmentResponse(Appointment appointment, Doctor doctor) =>
     new(

@@ -52,6 +52,7 @@ services:
       RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       RabbitMq__VirtualHost: /
       Cors__AllowedOrigin: ${CLIENT_ORIGIN:-http://localhost:3000}
+      Notification__HubUrl: http://localhost:${NOTIFICATION_PORT:-8082}/hubs/notifications
       TZ: ${TZ:-Asia/Ho_Chi_Minh}
     ports:
       - "${API_PORT:-8080}:8080"
@@ -101,7 +102,7 @@ services:
       RabbitMq__UserName: ${RABBITMQ_USER:-clinic_user}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
       RabbitMq__VirtualHost: /
-      Cors__AllowedOrigin: ${CLIENT_ORIGIN:-http://localhost:3000}
+      Cors__AllowedOrigin: http://localhost:${API_PORT:-8080}
       TZ: ${TZ:-Asia/Ho_Chi_Minh}
     ports:
       - "${NOTIFICATION_PORT:-8082}:8080"

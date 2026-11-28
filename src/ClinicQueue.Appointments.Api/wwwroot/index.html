@@ -22,6 +22,7 @@
         </span>
       </a>
       <span class="status-pill"><i></i> Đang hoạt động</span>
+      <span id="live-status" class="status-pill live-status"><i></i> Đang kết nối thời gian thực</span>
     </header>
 
     <div class="hero">
@@ -113,6 +114,64 @@
             <button type="submit" class="secondary">Tra cứu</button>
           </form>
           <pre id="lookup-result"></pre>
+
+          <hr class="card-divider">
+
+          <form id="cancel-form">
+            <label>
+              <span>Hủy lịch khám</span>
+              <input id="cancel-appointment-id" placeholder="Nhập mã lịch cần hủy">
+            </label>
+            <button type="submit" class="secondary danger">Hủy lịch</button>
+          </form>
+          <p id="cancel-result" class="message" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="card queue-card">
+          <div class="card-heading compact">
+            <div class="step">3</div>
+            <div>
+              <p class="card-kicker">THEO DÕI TRỰC TIẾP</p>
+              <h2>Hàng đợi trong ngày</h2>
+            </div>
+          </div>
+          <form id="queue-form">
+            <label>
+              <span>Bác sĩ</span>
+              <select id="queue-doctor"></select>
+            </label>
+            <label>
+              <span>Ngày</span>
+              <input id="queue-date" type="date">
+            </label>
+            <button type="submit" class="secondary">Xem hàng đợi</button>
+          </form>
+          <pre id="queue-result"></pre>
+        </section>
+
+        <section class="card status-card">
+          <div class="card-heading compact">
+            <div class="step">4</div>
+            <div>
+              <p class="card-kicker">QUẢN LÝ PHỤC VỤ</p>
+              <h2>Trạng thái bác sĩ/phòng</h2>
+            </div>
+          </div>
+          <form id="doctor-status-form">
+            <label>Bác sĩ
+              <select id="status-doctor"></select>
+            </label>
+            <label>Trạng thái
+              <select id="doctor-status">
+                <option>Available</option>
+                <option>Busy</option>
+                <option>OnBreak</option>
+                <option>Closed</option>
+              </select>
+            </label>
+            <button type="submit" class="secondary">Cập nhật bác sĩ</button>
+          </form>
+          <p id="doctor-status-result" class="message"></p>
         </section>
 
         <section class="help-card">
@@ -127,6 +186,7 @@
       </aside>
     </div>
   </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

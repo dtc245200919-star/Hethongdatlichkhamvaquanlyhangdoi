@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+  <rect width="1200" height="520" fill="#f8fbfc"/>
+  <style>
+    .box { fill:#fff; stroke:#3e9a9a; stroke-width:3; rx:16; }
+    .title { font: bold 22px "Segoe UI"; fill:#183b56; }
+    .text { font: 16px "Segoe UI"; fill:#4d6676; }
+    .arrow { stroke:#327f89; stroke-width:4; fill:none; marker-end:url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#327f89"/>
+    </marker>
+  </defs>
+  <rect class="box" x="40" y="210" width="180" height="100"/>
+  <text class="title" x="65" y="250">Client</text>
+  <text class="text" x="65" y="278">Web / Console</text>
+  <rect class="box" x="300" y="210" width="220" height="100"/>
+  <text class="title" x="325" y="250">Appointments API</text>
+  <text class="text" x="325" y="278">REST + Outbox</text>
+  <rect class="box" x="620" y="80" width="180" height="100"/>
+  <text class="title" x="660" y="120">PostgreSQL</text>
+  <text class="text" x="650" y="150">Data + Queue</text>
+  <rect class="box" x="620" y="340" width="180" height="100"/>
+  <text class="title" x="650" y="380">RabbitMQ</text>
+  <text class="text" x="645" y="408">Durable queues</text>
+  <rect class="box" x="900" y="340" width="240" height="100"/>
+  <text class="title" x="925" y="380">Queue Worker</text>
+  <text class="text" x="925" y="408">Cấp số thứ tự</text>
+  <rect class="box" x="900" y="80" width="240" height="100"/>
+  <text class="title" x="925" y="120">Notification</text>
+  <text class="text" x="925" y="150">RabbitMQ + SignalR</text>
+  <path class="arrow" d="M220 260 L300 260"/>
+  <path class="arrow" d="M520 260 L620 130"/>
+  <path class="arrow" d="M520 260 L620 390"/>
+  <path class="arrow" d="M800 390 L900 390"/>
+  <path class="arrow" d="M1020 340 L1020 180"/>
+  <path class="arrow" d="M900 130 L800 130"/>
+  <path class="arrow" d="M900 130 L220 130 L220 210"/>
+  <text class="text" x="235" y="195">REST</text>
+  <text class="text" x="530" y="180">Transaction</text>
+  <text class="text" x="530" y="330">appointment.requested</text>
+  <text class="text" x="820" y="460">queue.changed</text>
+  <text class="text" x="1040" y="235">SignalR</text>
+</svg>
